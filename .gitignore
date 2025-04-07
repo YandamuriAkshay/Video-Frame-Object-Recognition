@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# Virtual environment
+venv/
+env/
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# IDE files
+.vscode/
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+temp/
+tmp/
+
+# Uploaded videos and processed frames
+uploaded_videos/
+processed_frames/
+
+# Log files
+*.log
+
+# Database files
+*.db
+*.sqlite
