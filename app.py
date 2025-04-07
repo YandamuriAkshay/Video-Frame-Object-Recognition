@@ -257,7 +257,8 @@ if st.session_state.extraction_complete:
         st.markdown('</div>', unsafe_allow_html=True)
         
         # Frame details in a styled card
-        if st.session_state.video_info:
+        if st.session_state.video_info and st.session_state.frames:
+            current_index = st.session_state.current_frame_index
             with st.expander("Frame Details"):
                 frame_details = {
                     "Frame Number": current_index + 1,

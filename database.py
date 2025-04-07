@@ -2,7 +2,7 @@ import os
 import json
 import time
 import logging
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, LargeBinary, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
@@ -39,7 +39,7 @@ def test_database_connection(max_retries=3, retry_delay=2):
         try:
             # Try to connect and run a simple query
             with engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             logger.info("Database connection successful")
             return True
         except OperationalError as e:
@@ -161,7 +161,7 @@ class DatabaseManager:
             try:
                 # Test connection first
                 with engine.connect() as conn:
-                    conn.execute("SELECT 1")
+                    conn.execute(text("SELECT 1"))
                 
                 # If connection successful, create tables
                 Base.metadata.create_all(engine)
@@ -199,7 +199,7 @@ class DatabaseManager:
                 # Try to create a session and test it
                 session = self.Session()
                 # Test the session with a simple query
-                session.execute("SELECT 1").fetchall()
+                session.execute(text("SELECT 1")).fetchall()
                 return session
             except OperationalError as e:
                 last_error = e
