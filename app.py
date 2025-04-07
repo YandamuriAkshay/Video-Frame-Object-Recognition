@@ -10,6 +10,7 @@ import time
 from video_processor import VideoProcessor
 from object_detector import ObjectDetector
 from data_manager import DataManager
+from database import DatabaseManager
 
 # Set page configuration
 st.set_page_config(
@@ -38,6 +39,13 @@ if 'detection_complete' not in st.session_state:
 video_processor = VideoProcessor()
 object_detector = ObjectDetector()
 data_manager = DataManager()
+db_manager = DatabaseManager()
+
+# Initialize session state for database
+if 'saved_videos' not in st.session_state:
+    st.session_state.saved_videos = []
+if 'current_video_id' not in st.session_state:
+    st.session_state.current_video_id = None
 
 
 def reset_session():
@@ -49,6 +57,7 @@ def reset_session():
     st.session_state.video_info = None
     st.session_state.extraction_complete = False
     st.session_state.detection_complete = False
+    st.session_state.current_video_id = None
 
 
 def navigate_frames(direction):
@@ -94,8 +103,27 @@ with st.sidebar:
     export_format = st.selectbox("Export format", ["CSV", "JSON"])
     export_button = st.button("Export Tagged Data", disabled=not st.session_state.detection_complete)
     
+    # Database section
+    st.subheader("5. Database")
+    
+    # Save to database button
+    save_db_button = st.button("Save to Database", 
+                              disabled=not (st.session_state.extraction_complete and st.session_state.detection_complete))
+    
+    # Saved videos selector
+    saved_videos = db_manager.get_all_videos()
+    video_options = ["Select a saved video..."] + [f"{v.id}: {v.filename} ({v.processed_timestamp.strftime('%Y-%m-%d %H:%M')})" 
+                                                for v in saved_videos]
+    selected_video = st.selectbox("Load saved video", options=video_options)
+    
+    load_video_button = st.button("Load Selected Video", 
+                                 disabled=(selected_video == "Select a saved video..."))
+    
+    delete_video_button = st.button("Delete Selected Video", 
+                                   disabled=(selected_video == "Select a saved video..."))
+    
     # Reset button
-    st.subheader("5. Reset")
+    st.subheader("6. Reset")
     reset_button = st.button("Reset All")
 
 # Main content area
@@ -303,3 +331,87 @@ if export_button and st.session_state.detection_complete:
 if st.session_state.video_info:
     with st.expander("Video Information"):
         st.json(st.session_state.video_info)
+
+# Handle save to database functionality
+if save_db_button and st.session_state.detection_complete:
+    try:
+        with st.spinner('Saving to database...'):
+            # Save video data to database
+            video_id = db_manager.save_video_data(
+                st.session_state.frames,
+                st.session_state.video_info,
+                st.session_state.detections,
+                st.session_state.manual_tags
+            )
+            
+            # Set current video ID
+            st.session_state.current_video_id = video_id
+            
+            st.success(f"Video data saved to database with ID: {video_id}")
+            st.session_state.saved_videos = db_manager.get_all_videos()
+            st.rerun()
+    except Exception as e:
+        st.error(f"Error saving to database: {str(e)}")
+
+# Handle load from database functionality
+if load_video_button and selected_video != "Select a saved video...":
+    try:
+        with st.spinner('Loading from database...'):
+            # Extract video ID from selection
+            video_id = int(selected_video.split(":")[0])
+            
+            # Load video data from database
+            frames, video_info, detections, manual_tags = db_manager.load_video_data(video_id)
+            
+            # Update session state with loaded data
+            if frames and video_info:
+                st.session_state.frames = frames
+                st.session_state.video_info = video_info
+                st.session_state.detections = detections
+                st.session_state.manual_tags = manual_tags
+                st.session_state.current_frame_index = 0
+                st.session_state.extraction_complete = True
+                st.session_state.detection_complete = True
+                st.session_state.current_video_id = video_id
+                
+                st.success(f"Successfully loaded video data from database (ID: {video_id})")
+                st.rerun()
+            else:
+                st.error("Failed to load video data from database")
+    except Exception as e:
+        st.error(f"Error loading from database: {str(e)}")
+
+# Handle delete from database functionality
+if delete_video_button and selected_video != "Select a saved video...":
+    try:
+        # Extract video ID from selection
+        video_id = int(selected_video.split(":")[0])
+        
+        # Show confirmation dialog
+        if st.session_state.get('confirmed_delete', False):
+            # If already confirmed, delete the video
+            success = db_manager.delete_video(video_id)
+            
+            if success:
+                st.success(f"Video with ID {video_id} deleted from database")
+                # Reset confirmation flag
+                st.session_state.confirmed_delete = False
+                # Refresh saved videos list
+                st.session_state.saved_videos = db_manager.get_all_videos()
+                st.rerun()
+            else:
+                st.error(f"Failed to delete video with ID {video_id}")
+        else:
+            # First ask for confirmation
+            st.warning(f"Are you sure you want to delete video with ID {video_id}? This cannot be undone.")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes, delete"):
+                    st.session_state.confirmed_delete = True
+                    st.rerun()
+            with col2:
+                if st.button("Cancel"):
+                    st.rerun()
+    except Exception as e:
+        st.error(f"Error deleting from database: {str(e)}")
