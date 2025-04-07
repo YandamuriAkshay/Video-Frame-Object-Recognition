@@ -82,41 +82,41 @@ def navigate_frames(direction):
 
 
 # Main application layout
-st.title("Video Frame Object Recognition")
-st.markdown("Extract frames from videos, detect objects, and manually tag them.")
+st.title("🎬 Video Frame Object Recognition")
+st.markdown("Extract frames from videos, detect objects, and manually tag them for visual auditing.")
 
 # Sidebar for controls and settings
 with st.sidebar:
-    st.header("Controls")
+    st.header("🎮 Controls")
     
     # File upload section
-    st.subheader("1. Upload Video")
+    st.markdown("<div class='settings-section'><span class='icon-upload'></span><strong>1. Upload Video</strong></div>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Choose a video file", type=["mp4", "avi", "mov", "mkv"])
     
     # Frame extraction settings
-    st.subheader("2. Frame Extraction Settings")
+    st.markdown("<div class='settings-section'><span class='icon-settings'></span><strong>2. Frame Extraction Settings</strong></div>", unsafe_allow_html=True)
     frame_interval = st.slider("Extract every Nth frame", min_value=1, max_value=100, value=30, 
                                help="Higher values = fewer frames extracted")
     max_frames = st.number_input("Maximum frames to extract", min_value=1, max_value=1000, value=50)
     
     # Process video button
-    extract_button = st.button("Extract Frames")
+    extract_button = st.button("🔍 Extract Frames")
     
     # Object detection section
-    st.subheader("3. Object Detection")
+    st.markdown("<div class='settings-section'><span class='icon-detection'></span><strong>3. Object Detection</strong></div>", unsafe_allow_html=True)
     confidence_threshold = st.slider("Confidence threshold", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
-    detect_button = st.button("Detect Objects", disabled=not st.session_state.extraction_complete)
+    detect_button = st.button("🤖 Detect Objects", disabled=not st.session_state.extraction_complete)
     
     # Export section
-    st.subheader("4. Export Results")
+    st.markdown("<div class='settings-section'><span class='icon-export'></span><strong>4. Export Results</strong></div>", unsafe_allow_html=True)
     export_format = st.selectbox("Export format", ["CSV", "JSON"])
-    export_button = st.button("Export Tagged Data", disabled=not st.session_state.detection_complete)
+    export_button = st.button("📊 Export Data", disabled=not st.session_state.detection_complete)
     
     # Database section
-    st.subheader("5. Database")
+    st.markdown("<div class='settings-section'><span class='icon-database'></span><strong>5. Database</strong></div>", unsafe_allow_html=True)
     
     # Save to database button
-    save_db_button = st.button("Save to Database", 
+    save_db_button = st.button("💾 Save to Database", 
                               disabled=not (st.session_state.extraction_complete and st.session_state.detection_complete))
     
     # Saved videos selector
@@ -125,20 +125,22 @@ with st.sidebar:
                                                 for v in saved_videos]
     selected_video = st.selectbox("Load saved video", options=video_options)
     
-    load_video_button = st.button("Load Selected Video", 
-                                 disabled=(selected_video == "Select a saved video..."))
-    
-    delete_video_button = st.button("Delete Selected Video", 
-                                   disabled=(selected_video == "Select a saved video..."))
+    col1, col2 = st.columns(2)
+    with col1:
+        load_video_button = st.button("📂 Load", 
+                                    disabled=(selected_video == "Select a saved video..."))
+    with col2:
+        delete_video_button = st.button("🗑️ Delete", 
+                                    disabled=(selected_video == "Select a saved video..."))
     
     # Reset button
-    st.subheader("6. Reset")
-    reset_button = st.button("Reset All")
+    st.markdown("<div class='settings-section'><span class='icon-reset'></span><strong>6. Reset</strong></div>", unsafe_allow_html=True)
+    reset_button = st.button("🔄 Reset All")
 
 # Main content area
 if reset_button:
     reset_session()
-    st.success("All data has been reset.")
+    st.markdown('<div class="success-message">🔄 All data has been reset.</div>', unsafe_allow_html=True)
     st.rerun()
 
 # Handle video upload and frame extraction
@@ -159,9 +161,9 @@ if uploaded_file is not None and extract_button:
                 st.session_state.video_info = video_info
                 st.session_state.extraction_complete = True
                 st.session_state.manual_tags = {i: [] for i in range(len(frames))}
-                st.success(f"Successfully extracted {len(frames)} frames from video.")
+                st.markdown(f'<div class="success-message">✅ Successfully extracted {len(frames)} frames from video.</div>', unsafe_allow_html=True)
             else:
-                st.error("No frames could be extracted from the video.")
+                st.markdown('<div class="error-message">❌ No frames could be extracted from the video.</div>', unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error extracting frames: {str(e)}")
         finally:
@@ -186,19 +188,23 @@ if st.session_state.extraction_complete and detect_button:
             
             st.session_state.detections = all_detections
             st.session_state.detection_complete = True
-            st.success(f"Object detection completed on {len(all_detections)} frames.")
+            st.markdown(f'<div class="success-message">🤖 Object detection completed on {len(all_detections)} frames.</div>', unsafe_allow_html=True)
         except Exception as e:
-            st.error(f"Error during object detection: {str(e)}")
+            st.markdown(f'<div class="error-message">❌ Error during object detection: {str(e)}</div>', unsafe_allow_html=True)
 
 # Display frame and detection results
 if st.session_state.extraction_complete:
-    st.subheader("Frame Viewer")
+    st.markdown("<h2>🖼️ Frame Viewer</h2>", unsafe_allow_html=True)
     
     # Create columns for the viewer
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        # Navigation controls
+        # Frame container with custom styling
+        st.markdown('<div class="content-card frame-container">', unsafe_allow_html=True)
+        
+        # Navigation controls with icons and styling
+        st.markdown('<div class="nav-buttons">', unsafe_allow_html=True)
         nav_col1, nav_col2, nav_col3, nav_col4 = st.columns(4)
         with nav_col1:
             st.button("⏮️ First", on_click=navigate_frames, args=("first",), 
@@ -212,6 +218,7 @@ if st.session_state.extraction_complete:
         with nav_col4:
             st.button("Last ⏭️", on_click=navigate_frames, args=("last",), 
                       disabled=st.session_state.current_frame_index == len(st.session_state.frames) - 1)
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Frame display
         if st.session_state.frames:
@@ -228,49 +235,68 @@ if st.session_state.extraction_complete:
                     label = detection['class']
                     confidence = detection['confidence']
                     
-                    # Draw rectangle and label
-                    cv2.rectangle(current_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    cv2.putText(current_frame, f"{label} {confidence:.2f}", (x, y - 10), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    # Draw rectangle and label with bright colors for visibility on dark theme
+                    cv2.rectangle(current_frame, (x, y), (x + w, y + h), (0, 255, 255), 2)  # Yellow border
+                    # Add background to text for better readability
+                    text_size = cv2.getTextSize(f"{label} {confidence:.2f}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                    cv2.rectangle(current_frame, (x, y - 20), (x + text_size[0], y), (0, 0, 0), -1)
+                    cv2.putText(current_frame, f"{label} {confidence:.2f}", (x, y - 5), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
             
             # Convert from BGR to RGB for display
             current_frame_rgb = cv2.cvtColor(current_frame, cv2.COLOR_BGR2RGB)
             
-            # Display the frame
-            st.image(current_frame_rgb, caption=f"Frame {current_index + 1} of {len(st.session_state.frames)}", 
-                     use_column_width=True)
+            # Display the frame with custom caption
+            frame_caption = f"Frame {current_index + 1} of {len(st.session_state.frames)}"
+            if st.session_state.video_info:
+                frame_timestamp = f"{(current_index * st.session_state.video_info['frame_interval']) / st.session_state.video_info['fps']:.2f}"
+                frame_caption += f" | Time: {frame_timestamp}s"
             
-            # Frame details
-            frame_details = {
-                "Frame Number": current_index + 1,
-                "Timestamp": f"{(current_index * st.session_state.video_info['frame_interval']) / st.session_state.video_info['fps']:.2f} seconds"
-            }
-            
-            # Display frame information
-            st.json(frame_details)
+            st.image(current_frame_rgb, caption=frame_caption, use_column_width=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Frame details in a styled card
+        if st.session_state.video_info:
+            with st.expander("Frame Details"):
+                frame_details = {
+                    "Frame Number": current_index + 1,
+                    "Total Frames": len(st.session_state.frames),
+                    "Timestamp": f"{(current_index * st.session_state.video_info['frame_interval']) / st.session_state.video_info['fps']:.2f} seconds",
+                    "Resolution": f"{st.session_state.video_info.get('width', 'N/A')}x{st.session_state.video_info.get('height', 'N/A')}"
+                }
+                
+                st.json(frame_details)
     
     with col2:
-        # Manual tagging section
-        st.subheader("Manual Tagging")
+        # Manual tagging section with improved styling
+        st.markdown("<h3>🏷️ Manual Tagging</h3>", unsafe_allow_html=True)
         
         current_index = st.session_state.current_frame_index
         
-        # Display automatic detections
+        # Display automatic detections with styled containers
         if st.session_state.detection_complete:
-            st.markdown("**Automatic Detections:**")
+            st.markdown('<div class="content-card">', unsafe_allow_html=True)
+            st.markdown("🤖 **Automatic Detections:**")
             current_detections = st.session_state.detections[current_index]
             if current_detections:
                 for i, detection in enumerate(current_detections):
-                    st.text(f"{i+1}. {detection['class']} ({detection['confidence']:.2f})")
+                    st.markdown(
+                        f'<div class="detection-item">{i+1}. {detection["class"]} '
+                        f'<span style="color:#BB86FC">({detection["confidence"]:.2f})</span></div>', 
+                        unsafe_allow_html=True
+                    )
             else:
-                st.text("No objects detected in this frame.")
+                st.markdown('<div class="detection-item">No objects detected in this frame.</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Manual tag input
-        st.markdown("**Add Manual Tag:**")
+        # Manual tag input with styled form
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.markdown("✏️ **Add Manual Tag:**")
         tag_name = st.text_input("Object name", key=f"tag_name_{current_index}")
-        tag_desc = st.text_area("Description (optional)", key=f"tag_desc_{current_index}")
+        tag_desc = st.text_area("Description (optional)", key=f"tag_desc_{current_index}", height=80)
         
-        if st.button("Add Tag", key=f"add_tag_{current_index}"):
+        if st.button("➕ Add Tag", key=f"add_tag_{current_index}"):
             if tag_name:
                 if current_index not in st.session_state.manual_tags:
                     st.session_state.manual_tags[current_index] = []
@@ -281,29 +307,33 @@ if st.session_state.extraction_complete:
                     "description": tag_desc,
                     "timestamp": time.time()
                 })
-                st.success(f"Added tag '{tag_name}' to frame {current_index + 1}")
+                st.markdown(f'<div class="success-message">✅ Added tag "{tag_name}" to frame {current_index + 1}</div>', unsafe_allow_html=True)
                 
                 # Clear the input fields by forcing a rerun
                 st.rerun()
             else:
-                st.error("Please enter an object name.")
+                st.markdown('<div class="error-message">❌ Please enter an object name.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         
-        # Display manual tags for this frame
-        st.markdown("**Manual Tags:**")
+        # Display manual tags for this frame in styled containers
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.markdown("📋 **Manual Tags:**")
         if current_index in st.session_state.manual_tags and st.session_state.manual_tags[current_index]:
             for i, tag in enumerate(st.session_state.manual_tags[current_index]):
-                with st.container():
-                    col_tag, col_delete = st.columns([4, 1])
-                    with col_tag:
-                        st.markdown(f"**{tag['name']}**")
-                        if tag['description']:
-                            st.text(tag['description'])
-                    with col_delete:
-                        if st.button("🗑️", key=f"delete_tag_{current_index}_{i}"):
-                            st.session_state.manual_tags[current_index].pop(i)
-                            st.rerun()
+                st.markdown(f'<div class="tag-container">', unsafe_allow_html=True)
+                col_tag, col_delete = st.columns([4, 1])
+                with col_tag:
+                    st.markdown(f"**{tag['name']}**")
+                    if tag['description']:
+                        st.markdown(f"<em>{tag['description']}</em>", unsafe_allow_html=True)
+                with col_delete:
+                    if st.button("🗑️", key=f"delete_tag_{current_index}_{i}"):
+                        st.session_state.manual_tags[current_index].pop(i)
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
-            st.text("No manual tags for this frame.")
+            st.markdown('<div class="pending-step">No manual tags for this frame.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # Handle export functionality
 if export_button and st.session_state.detection_complete:
@@ -332,9 +362,9 @@ if export_button and st.session_state.detection_complete:
                 mime="application/json"
             )
             
-        st.success(f"Data exported successfully in {export_format} format.")
+        st.markdown(f'<div class="success-message">📊 Data exported successfully in {export_format} format.</div>', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error exporting data: {str(e)}")
+        st.markdown(f'<div class="error-message">❌ Error exporting data: {str(e)}</div>', unsafe_allow_html=True)
 
 # Display video info if available
 if st.session_state.video_info:
@@ -356,11 +386,11 @@ if save_db_button and st.session_state.detection_complete:
             # Set current video ID
             st.session_state.current_video_id = video_id
             
-            st.success(f"Video data saved to database with ID: {video_id}")
+            st.markdown(f'<div class="success-message">💾 Video data saved to database with ID: {video_id}</div>', unsafe_allow_html=True)
             st.session_state.saved_videos = db_manager.get_all_videos()
             st.rerun()
     except Exception as e:
-        st.error(f"Error saving to database: {str(e)}")
+        st.markdown(f'<div class="error-message">❌ Error saving to database: {str(e)}</div>', unsafe_allow_html=True)
 
 # Handle load from database functionality
 if load_video_button and selected_video != "Select a saved video...":
@@ -383,12 +413,12 @@ if load_video_button and selected_video != "Select a saved video...":
                 st.session_state.detection_complete = True
                 st.session_state.current_video_id = video_id
                 
-                st.success(f"Successfully loaded video data from database (ID: {video_id})")
+                st.markdown(f'<div class="success-message">📂 Successfully loaded video data from database (ID: {video_id})</div>', unsafe_allow_html=True)
                 st.rerun()
             else:
-                st.error("Failed to load video data from database")
+                st.markdown('<div class="error-message">❌ Failed to load video data from database</div>', unsafe_allow_html=True)
     except Exception as e:
-        st.error(f"Error loading from database: {str(e)}")
+        st.markdown(f'<div class="error-message">❌ Error loading from database: {str(e)}</div>', unsafe_allow_html=True)
 
 # Handle delete from database functionality
 if delete_video_button and selected_video != "Select a saved video...":
@@ -402,17 +432,17 @@ if delete_video_button and selected_video != "Select a saved video...":
             success = db_manager.delete_video(video_id)
             
             if success:
-                st.success(f"Video with ID {video_id} deleted from database")
+                st.markdown(f'<div class="success-message">🗑️ Video with ID {video_id} deleted from database</div>', unsafe_allow_html=True)
                 # Reset confirmation flag
                 st.session_state.confirmed_delete = False
                 # Refresh saved videos list
                 st.session_state.saved_videos = db_manager.get_all_videos()
                 st.rerun()
             else:
-                st.error(f"Failed to delete video with ID {video_id}")
+                st.markdown(f'<div class="error-message">❌ Failed to delete video with ID {video_id}</div>', unsafe_allow_html=True)
         else:
-            # First ask for confirmation
-            st.warning(f"Are you sure you want to delete video with ID {video_id}? This cannot be undone.")
+            # First ask for confirmation with styled warning
+            st.markdown(f'<div style="background-color:#3A3A1E; color:#FFC107; padding:1rem; border-radius:8px; border-left:4px solid #FFC107;">⚠️ Are you sure you want to delete video with ID {video_id}? This cannot be undone.</div>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
@@ -423,4 +453,4 @@ if delete_video_button and selected_video != "Select a saved video...":
                 if st.button("Cancel"):
                     st.rerun()
     except Exception as e:
-        st.error(f"Error deleting from database: {str(e)}")
+        st.markdown(f'<div class="error-message">❌ Error deleting from database: {str(e)}</div>', unsafe_allow_html=True)
