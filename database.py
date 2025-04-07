@@ -1,19 +1,61 @@
 import os
 import json
+import time
+import logging
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Boolean, DateTime, ForeignKey, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import datetime
 import numpy as np
 import cv2
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Get the database URL from environment variables
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# Create SQLAlchemy engine and session
-engine = create_engine(DATABASE_URL)
+# Create SQLAlchemy engine with connection pool settings
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,  # Check connection before using from pool
+    pool_recycle=3600,   # Recycle connections after 1 hour
+    connect_args={
+        'connect_timeout': 10,  # Connection timeout in seconds
+    }
+)
+
+# Configure session
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
+
+# Function to test database connection with retry
+def test_database_connection(max_retries=3, retry_delay=2):
+    """Test database connection with retry mechanism"""
+    retries = 0
+    while retries < max_retries:
+        try:
+            # Try to connect and run a simple query
+            with engine.connect() as conn:
+                conn.execute("SELECT 1")
+            logger.info("Database connection successful")
+            return True
+        except OperationalError as e:
+            retries += 1
+            if retries < max_retries:
+                logger.warning(f"Database connection failed. Retrying in {retry_delay}s: {str(e)}")
+                time.sleep(retry_delay)
+            else:
+                logger.error(f"Database connection failed after {max_retries} attempts: {str(e)}")
+                return False
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to database: {str(e)}")
+            return False
+
+# Test connection at module load time
+test_database_connection()
 
 class Video(Base):
     """Video metadata table"""
@@ -103,14 +145,78 @@ class ManualTag(Base):
 class DatabaseManager:
     """Database management class for video recognition application"""
     
-    def __init__(self):
-        """Initialize the database and create tables if they don't exist"""
+    def __init__(self, max_init_retries=3):
+        """
+        Initialize the database and create tables if they don't exist
+        
+        Args:
+            max_init_retries (int): Maximum number of retries for database initialization
+        """
         self.engine = engine
         self.Session = Session
-        Base.metadata.create_all(engine)  # Create tables if they don't exist
+        
+        # Attempt to initialize database with retry
+        retries = 0
+        while retries < max_init_retries:
+            try:
+                # Test connection first
+                with engine.connect() as conn:
+                    conn.execute("SELECT 1")
+                
+                # If connection successful, create tables
+                Base.metadata.create_all(engine)
+                logger.info("Database initialized successfully")
+                break
+            except OperationalError as e:
+                retries += 1
+                if retries < max_init_retries:
+                    logger.warning(f"Database initialization failed. Retrying... ({retries}/{max_init_retries}): {str(e)}")
+                    time.sleep(2)
+                else:
+                    logger.error(f"Database initialization failed after {max_init_retries} attempts: {str(e)}")
+            except SQLAlchemyError as e:
+                logger.error(f"SQLAlchemy error during initialization: {str(e)}")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error during database initialization: {str(e)}")
+                break
     
-    def create_session(self):
-        """Create and return a new database session"""
+    def create_session(self, max_retries=3):
+        """
+        Create and return a new database session with retry mechanism
+        
+        Args:
+            max_retries (int): Maximum number of retries for session creation
+            
+        Returns:
+            Session: SQLAlchemy session object
+        """
+        retries = 0
+        last_error = None
+        
+        while retries < max_retries:
+            try:
+                # Try to create a session and test it
+                session = self.Session()
+                # Test the session with a simple query
+                session.execute("SELECT 1").fetchall()
+                return session
+            except OperationalError as e:
+                last_error = e
+                retries += 1
+                if retries < max_retries:
+                    logger.warning(f"Database session creation failed. Retrying ({retries}/{max_retries}): {str(e)}")
+                    time.sleep(1)
+                else:
+                    logger.error(f"Failed to create database session after {max_retries} attempts: {str(e)}")
+            except Exception as e:
+                last_error = e
+                logger.error(f"Unexpected error creating database session: {str(e)}")
+                break
+        
+        # If we got here, all retries failed
+        # Return a session anyway, and let the caller handle any errors
+        logger.warning("Returning a session despite connection issues")
         return self.Session()
     
     def save_video_data(self, frames, video_info, detections=None, manual_tags=None):
