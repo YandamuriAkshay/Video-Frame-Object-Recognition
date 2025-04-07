@@ -19,6 +19,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# Load custom CSS
+def load_css():
+    with open(".streamlit/style.css", "r") as f:
+        css = f.read()
+    return st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+# Apply custom CSS
+load_css()
+
 # Initialize session state variables if they don't exist
 if 'frames' not in st.session_state:
     st.session_state.frames = []
